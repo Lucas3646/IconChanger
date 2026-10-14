@@ -9,12 +9,30 @@ Application Android personnelle de création et de personnalisation d’icônes,
 
 Sur le téléphone, téléchargez le fichier avec Chrome. Si vous choisissez le ZIP, extrayez-le dans Fichiers, puis ouvrez `Icon-Studio.apk`. Android demande éventuellement d’autoriser cette source à installer des applications. Validez l’installation. Le navigateur ne peut pas installer un APK automatiquement.
 
+## Mise à jour 1.0.1 — icône sans badge
+
+Dans l’éditeur, appuyez sur **Appliquer**, puis choisissez **Sans badge · widget**. Un widget 1 × 1 affiche votre dessin sans badge Icon Studio ni cercle blanc ajouté et ouvre l’application associée. Confirmez l’ajout puis retirez l’ancien raccourci avec son badge depuis l’écran d’accueil.
+
+Si le launcher ne propose pas l’ajout direct : appui long sur une zone vide → Widgets → Icon Studio → Icône sans badge, puis choisissez la création préparée. Les modifications enregistrées dans l’éditeur mettent à jour ses widgets existants.
+
+La taille et les marges d’un widget dépendent du launcher ; il ne peut pas être rangé comme une application dans un dossier. Il conserve la forme dessinée dans l’éditeur. Le format adaptatif corrige aussi le cercle blanc des raccourcis classiques lorsque le fond choisi est opaque ; ceux-ci gardent leur badge Android et la forme imposée par le launcher.
+
+## Votre sélection — 31 applications
+
+Dans **Explorer → Votre sélection**, retrouvez YouTube, Shazam, Roblox, WhatsApp, Vinted, ChatGPT, Duolingo, CapCut, ColorPuz, Wilgo, Instagram, Waze, Pinterest, Gmail, Gemini, Maps, PRONOTE, Chrome, Yuka, TikTok, Spotify, Samsung Browser, NGL, Brawl Stars, Échecs, MyRecorder, Samsung Notes, Word Search, Life360, YouTube Music et Snapchat.
+
+Chaque profil possède une palette dédiée, un cadrage ajusté et quatre compositions : **Signature**, **Néon précis**, **Duo lumineux**, **Porcelaine**. Elles sont aussi proposées directement dans l’éditeur de l’application. Les calques, couleurs, proportions et effets restent modifiables.
+
+Les dessins vectoriels disponibles sont intégrés hors ligne. Pour les autres applications, le vrai logo installé sur le téléphone sert de source : aucun symbole générique ne remplace silencieusement une application. Sans application associée ni dessin intégré, l’aperçu affiche des initiales et le signale. Les jeux conservent leur illustration et leurs couleurs en Signature ; les styles lumineux utilisent un traitement de contours tenant compte de la transparence. Les fonds uniformes noirs ou blancs sont retirés automatiquement lorsque leur détection est fiable.
+
+Les noms génériques (Échecs, Word Search, MyRecorder…) utilisent l’application détectée ou choisie, sans imposer un éditeur particulier. Si plusieurs applications correspondent, la fiche demande une association explicite.
+
 ## V1
 
 - Applications lançables installées : nom, icône actuelle, recherche, filtres et état de création.
 - Quatre onglets : Applications, Explorer, Studio, Mes icônes.
 - Huit collections : Neon Red, Blue, Purple, Minimal Dark, Light, Pastel, Glass, Monochrome.
-- 23 logos courants, 24 symboles et import PNG/JPG/WebP via le sélecteur Android.
+- 31 logos vectoriels intégrés, 24 symboles et import PNG/JPG/WebP via le sélecteur Android.
 - Éditeur à 20 calques : images, logos, symboles, texte et initiales ; duplication, ordre de superposition et suppression.
 - Zoom, déplacement, cadrage par les limites de l’icône, rotation, opacité ; gestes dans l’aperçu et curseurs précis.
 - Fond uni ou dégradé, couleurs libres et code hexadécimal, transparence, arrondis et bordures.
@@ -38,10 +56,10 @@ Studio permet également de créer librement sans application. Mes icônes perme
 ## Limites réelles
 
 - L’icône originale dans la liste des applications n’est jamais remplacée. L’application ajoute un **raccourci**.
-- La forme finale, le badge Icon Studio, la confirmation et le placement sont contrôlés par le launcher. Le badge ne peut pas être supprimé avec cette méthode standard.
+- La forme finale, le badge Icon Studio, la confirmation et le placement sont contrôlés par le launcher. Le badge ne peut pas être supprimé avec cette méthode standard ; utilisez le mode widget sans badge.
 - Une demande envoyée n’est pas une confirmation d’ajout : le statut est vérifié auprès du launcher au retour dans l’application.
 - Une création déjà épinglée conserve son identité et son raccourci est mis à jour ; créez une variante pour un deuxième raccourci.
-- Supprimer une création locale ne supprime pas le raccourci de l’écran d’accueil. Retirez-le manuellement depuis celui-ci.
+- Supprimer une création locale ne supprime pas le widget ou le raccourci de l’écran d’accueil. Retirez-le manuellement depuis celui-ci.
 - Une application désinstallée n’est plus lançable. Le raccourci affiche un message au lieu de planter.
 - Applications sans activité de lancement, profils professionnels et espaces privés peuvent ne pas apparaître. Aucun `QUERY_ALL_PACKAGES` n’est demandé.
 - Le retrait d’un fond repose sur sa luminosité ; il ne s’agit pas d’une segmentation IA du sujet. Glass est un rendu graphique, sans accès au fond d’écran.

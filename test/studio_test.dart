@@ -164,4 +164,30 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+  testWidgets(
+    'Apply explicitly offers badge-free widget and classic shortcut',
+    (tester) async {
+      final store = StudioStore(AndroidService());
+      await tester.runAsync(() => store.init());
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: studioTheme(Brightness.light),
+          home: EditorScreen(
+            store,
+            IconDesign(package: 'com.android.chrome', name: 'Chrome'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Appliquer sur l’écran d’accueil'));
+      await tester.pumpAndSettle();
+      expect(find.text('Sans badge · widget'), findsOneWidget);
+      expect(find.text('Raccourci classique'), findsOneWidget);
+      expect(
+        find.textContaining('Le badge Icon Studio reste imposé'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

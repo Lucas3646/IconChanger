@@ -1,5 +1,10 @@
 package app.iconstudio.icon_studio
 
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
+import android.graphics.Rect
+import android.graphics.Paint
+import android.graphics.drawable.AdaptiveIconDrawable
 import android.app.Activity
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
@@ -105,7 +110,7 @@ class MainActivity : FlutterActivity() {
                                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                             }
                             val shortcut = ShortcutInfo.Builder(this, id).setShortLabel(name.ifBlank { "Application" })
-                                .setLongLabel(name.ifBlank { "Application" }).setIcon(Icon.createWithBitmap(resized))
+                                .setLongLabel(name.ifBlank { "Application" }).setIcon(adaptiveIcon(resized, call.argument<Number>("background")?.toInt() ?: Color.BLACK))
                                 .setIntent(intent).build()
                             if (manager.pinnedShortcuts.any { it.id == id }) {
                                 if (manager.updateShortcuts(listOf(shortcut))) result.success("updated")
@@ -122,6 +127,24 @@ class MainActivity : FlutterActivity() {
                             if (resized !== bitmap) resized.recycle(); bitmap.recycle()
                         }
                     }
+                    "hasWidgetDesign" -> result.success(WidgetIcons.design(this,call.argument<String>("id")!!) != null)
+                    "updateWidgetDesign" -> {
+                        WidgetIcons.store(this,call.argument<String>("id")!!,call.argument<String>("name")!!,call.argument<String>("package")!!,call.argument<ByteArray>("bytes")!!)
+                        result.success(true)
+                    }
+                    "pinWidget" -> {
+                        val id=call.argument<String>("id")!!
+                        val pkg=call.argument<String>("package")!!
+                        if(packageManager.getLaunchIntentForPackage(pkg)==null) { result.error("MISSING_APP","Application désinstallée.",null);return@setMethodCallHandler }
+                        WidgetIcons.store(this,id,call.argument<String>("name")!!,pkg,call.argument<ByteArray>("bytes")!!)
+                        val wm=AppWidgetManager.getInstance(this)
+                        if(!wm.isRequestPinAppWidgetSupported) result.success("manual")
+                        else {
+                            val callback=PendingIntent.getBroadcast(this,id.hashCode(),Intent(this,WidgetPinReceiver::class.java).setAction("app.iconstudio.WIDGET.$id").putExtra("design_id",id),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
+                            val extras=Bundle().apply { putParcelable(AppWidgetManager.EXTRA_APPWIDGET_PREVIEW,WidgetIcons.views(this@MainActivity,id)) }
+                            result.success(if(wm.requestPinAppWidget(ComponentName(this,IconWidgetProvider::class.java),extras,callback)) "pending" else "manual")
+                        }
+                    }
                     "launchApp" -> {
                         val pkg = call.argument<String>("package")!!
                         val intent = packageManager.getLaunchIntentForPackage(pkg)
@@ -136,24 +159,43 @@ class MainActivity : FlutterActivity() {
                             val source = decodeBounded(path, 1024)
                             val w = source.width; val h = source.height
                             val pixels = IntArray(w * h); source.getPixels(pixels, 0, w, 0, 0, w, h)
-                            val output = IntArray(pixels.size)
-                            for (y in 0 until h) for (x in 0 until w) {
-                                val index = y * w + x; val color = pixels[index]
-                                val alpha = Color.alpha(color)
-                                val light = (Color.red(color) * 0.299 + Color.green(color) * 0.587 + Color.blue(color) * 0.114) / 255.0
-                                if (mode == "edges") {
-                                    fun value(a: Int, b: Int): Double {
-                                        val c = pixels[b.coerceIn(0,h-1) * w + a.coerceIn(0,w-1)]
-                                        return (Color.red(c) * .299 + Color.green(c) * .587 + Color.blue(c) * .114) / 255.0
+                            fun brightness(c: Int)=(Color.red(c)*.299+Color.green(c)*.587+Color.blue(c)*.114)/255.0
+                            var effective=mode
+                            if(mode=="autoLogo") {
+                                val border=mutableListOf<Int>()
+                                for(y in 0 until h step 2) for(x in 0 until w step 2) {
+                                    if(x<w*.05||x>w*.95||y<h*.05||y>h*.95) {
+                                        val c=pixels[y*w+x];if(Color.alpha(c)>230)border.add(c)
                                     }
-                                    val gx = -value(x-1,y-1)+value(x+1,y-1)-2*value(x-1,y)+2*value(x+1,y)-value(x-1,y+1)+value(x+1,y+1)
-                                    val gy = -value(x-1,y-1)-2*value(x,y-1)-value(x+1,y-1)+value(x-1,y+1)+2*value(x,y+1)+value(x+1,y+1)
-                                    val edge = ((sqrt(gx*gx+gy*gy)-tolerance*.7)*2).coerceIn(0.0,1.0)
-                                    output[index] = Color.argb((alpha*edge).toInt(),255,255,255)
+                                }
+                                effective=when {
+                                    border.size<4 -> "original"
+                                    border.count { brightness(it)>.86 }>border.size*.85 -> "removeWhite"
+                                    border.count { brightness(it)<.14 }>border.size*.85 -> "removeBlack"
+                                    else -> "original"
+                                }
+                                if(effective=="original") { source.recycle();main.post { result.success(path) };return@execute }
+                            }
+                            val output=IntArray(pixels.size)
+                            val opacity=DoubleArray(pixels.size) { Color.alpha(pixels[it])/255.0 }
+                            val luminance=DoubleArray(pixels.size) { brightness(pixels[it])*opacity[it] }
+                            fun sobel(values: DoubleArray,x: Int,y: Int): Double {
+                                fun at(a: Int,b: Int)=values[b.coerceIn(0,h-1)*w+a.coerceIn(0,w-1)]
+                                val gx=-at(x-1,y-1)+at(x+1,y-1)-2*at(x-1,y)+2*at(x+1,y)-at(x-1,y+1)+at(x+1,y+1)
+                                val gy=-at(x-1,y-1)-2*at(x,y-1)-at(x+1,y-1)+at(x-1,y+1)+2*at(x,y+1)+at(x+1,y+1)
+                                return sqrt(gx*gx+gy*gy)
+                            }
+                            for(y in 0 until h) for(x in 0 until w) {
+                                val i=y*w+x;val c=pixels[i];val alpha=Color.alpha(c)
+                                if(effective=="edges") {
+                                    val gradient=max(sobel(luminance,x,y),sobel(opacity,x,y))
+                                    val edge=((gradient-tolerance*.7)*2).coerceIn(0.0,1.0)
+                                    output[i]=Color.argb((255*edge).toInt(),255,255,255)
                                 } else {
-                                    val mask = if (mode == "removeWhite") ((1-light)/max(.03,tolerance)).coerceIn(0.0,1.0)
+                                    val light=brightness(c)
+                                    val mask=if(effective=="removeWhite") ((1-light)/max(.03,tolerance)).coerceIn(0.0,1.0)
                                         else (light/max(.03,tolerance)).coerceIn(0.0,1.0)
-                                    output[index] = Color.argb((alpha*mask).toInt(),Color.red(color),Color.green(color),Color.blue(color))
+                                    output[i]=Color.argb((alpha*mask).toInt(),Color.red(c),Color.green(c),Color.blue(c))
                                 }
                             }
                             val resultBitmap = Bitmap.createBitmap(output,w,h,Bitmap.Config.ARGB_8888)
@@ -167,6 +209,15 @@ class MainActivity : FlutterActivity() {
                 }
             } catch (e: Exception) { result.error("ANDROID", e.localizedMessage ?: "Opération impossible.", null) }
         }
+    }
+    private fun adaptiveIcon(source: Bitmap, background: Int): Icon {
+        val inset=AdaptiveIconDrawable.getExtraInsetFraction()
+        val side=(source.width*(1+2*inset)).roundToInt()
+        val padded=Bitmap.createBitmap(side,side,Bitmap.Config.ARGB_8888)
+        val canvas=Canvas(padded);canvas.drawColor(background)
+        val margin=(side-source.width)/2
+        canvas.drawBitmap(source,null,Rect(margin,margin,margin+source.width,margin+source.height),Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
+        return Icon.createWithAdaptiveBitmap(padded)
     }
     private fun decodeBounded(path: String, maxSize: Int): Bitmap {
         return ImageDecoder.decodeBitmap(ImageDecoder.createSource(File(path))) { decoder, info, _ ->

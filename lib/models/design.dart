@@ -146,6 +146,14 @@ class IconDesign {
 }
 
 const brands = <String, String>{
+  'shazam': 'Shazam',
+  'roblox': 'Roblox',
+  'vinted': 'Vinted',
+  'duolingo': 'Duolingo',
+  'waze': 'Waze',
+  'googlegemini': 'Gemini',
+  'youtubemusic': 'YouTube Music',
+  'chessdotcom': 'Chess.com',
   'instagram': 'Instagram',
   'youtube': 'YouTube',
   'tiktok': 'TikTok',
@@ -171,6 +179,13 @@ const brands = <String, String>{
   'threads': 'Threads',
 };
 const brandPackages = <String, String>{
+  'com.shazam.android': 'shazam',
+  'com.roblox.client': 'roblox',
+  'fr.vinted': 'vinted',
+  'com.duolingo': 'duolingo',
+  'com.waze': 'waze',
+  'com.google.android.apps.bard': 'googlegemini',
+  'com.google.android.apps.youtube.music': 'youtubemusic',
   'com.instagram.android': 'instagram',
   'com.google.android.youtube': 'youtube',
   'com.zhiliaoapp.musically': 'tiktok',

@@ -1,6 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/design.dart';
+import '../models/priority_apps.dart';
+import '../services/priority_art.dart';
+import 'priority_catalog.dart';
 import '../services/store.dart';
 import '../widgets/icon_art.dart';
 import '../widgets/studio_ui.dart';
@@ -140,6 +143,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+  bool openingApp = false;
   int index = 0;
   String search = '', filter = 'Toutes';
   StudioStore get store => widget.store;
@@ -196,6 +200,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
     ),
   );
+  Future<void> openApp(InstalledApp app) async {
+    if (openingApp) return;
+    openingApp = true;
+    try {
+      final profile = priorityForApp(app);
+      final d = profile == null
+          ? designForApp(app)
+          : await PriorityArt.build(
+              store.platform,
+              profile,
+              app,
+              PriorityStyle.signature,
+            );
+      if (mounted) await edit(d);
+    } catch (e) {
+      if (mounted) notice(context, friendlyError(e));
+    } finally {
+      openingApp = false;
+    }
+  }
+
   Widget _applications() {
     final saved = store.designs.map((d) => d.package).toSet();
     final apps = store.apps
@@ -205,6 +230,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 search.toLowerCase(),
               ) &&
               (filter != 'Personnalisées' || saved.contains(a.package)) &&
+              (filter != 'Votre sélection' || priorityForApp(a) != null) &&
               (filter != 'Téléchargées' || !a.system),
         )
         .toList();
@@ -235,19 +261,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           child: ListView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            children: ['Toutes', 'Téléchargées', 'Personnalisées']
-                .map(
-                  (f) => Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(f),
-                      selected: filter == f,
-                      onSelected: (_) => setState(() => filter = f),
-                      showCheckmark: false,
-                    ),
-                  ),
-                )
-                .toList(),
+            children:
+                ['Toutes', 'Votre sélection', 'Téléchargées', 'Personnalisées']
+                    .map(
+                      (f) => Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(f),
+                          selected: filter == f,
+                          onSelected: (_) => setState(() => filter = f),
+                          showCheckmark: false,
+                        ),
+                      ),
+                    )
+                    .toList(),
           ),
         ),
         const SizedBox(height: 10),
@@ -305,7 +332,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             style: const TextStyle(fontSize: 12),
                           ),
                           trailing: const Icon(Icons.chevron_right_rounded),
-                          onTap: () => edit(designForApp(a)),
+                          onTap: () => openApp(a),
                         ),
                       );
                     },
@@ -318,6 +345,55 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _explore() => CustomScrollView(
     slivers: [
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(24),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => PriorityCatalogScreen(store)),
+            ),
+            child: StudioCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Votre sélection',
+                          style: TextStyle(
+                            fontSize: 23,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_rounded),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '31 applications · 4 compositions chacune',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: ['instagram', 'youtube', 'shazam', 'spotify'].map(
+                      (id) {
+                        final p = priorityApps.firstWhere((p) => p.id == id);
+                        return IconArt(p.preview(PriorityStyle.neon), size: 56);
+                      },
+                    ).toList(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+
       const SliverToBoxAdapter(
         child: PageTitle(
           'Explorer',
@@ -672,7 +748,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 4),
-            const Text('Version 1.0 · Votre studio privé'),
+            const Text('Version 1.0.1 · Votre studio privé'),
             const SizedBox(height: 20),
             const Text('Apparence'),
             const SizedBox(height: 10),

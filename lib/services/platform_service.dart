@@ -25,6 +25,25 @@ class AndroidService {
   Future<String> pin(IconDesign d, Uint8List bytes) async =>
       (await channel.invokeMethod<String>('pinShortcut', {
         'id': 'icon-${d.id}',
+        'background':
+            (d.background & 0x00ffffff) |
+            ((d.backgroundOpacity * 255).round() << 24),
+        'package': d.package,
+        'name': d.name,
+        'bytes': bytes,
+      }))!;
+  Future<bool> hasWidget(String id) async =>
+      await channel.invokeMethod<bool>('hasWidgetDesign', {'id': id}) ?? false;
+  Future<void> updateWidget(IconDesign d, Uint8List bytes) =>
+      channel.invokeMethod('updateWidgetDesign', {
+        'id': d.id,
+        'package': d.package,
+        'name': d.name,
+        'bytes': bytes,
+      });
+  Future<String> pinWidget(IconDesign d, Uint8List bytes) async =>
+      (await channel.invokeMethod<String>('pinWidget', {
+        'id': d.id,
         'package': d.package,
         'name': d.name,
         'bytes': bytes,

@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../models/design.dart';
+import '../models/priority_apps.dart';
+import '../widgets/priority_styles.dart';
 import '../services/store.dart';
 import '../widgets/icon_art.dart';
 import '../widgets/studio_ui.dart';
@@ -84,11 +86,20 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   Future<bool> save({bool announce = true}) async {
+    final saved = d.copy();
     try {
-      await ArtImages.load(d);
-      await widget.store.save(d);
+      await ArtImages.load(saved);
+      await widget.store.save(saved);
+      if (await widget.store.platform.hasWidget(saved.id)) {
+        await widget.store.platform.updateWidget(
+          saved,
+          await ArtImages.png(saved, resolution: 512),
+        );
+      }
       if (mounted) {
-        setState(() => dirty = false);
+        if (jsonEncode(saved.toJson()) == snapshot()) {
+          setState(() => dirty = false);
+        }
         if (announce) notice(context, 'Création enregistrée dans Mes icônes.');
       }
       return true;
@@ -152,8 +163,73 @@ class _EditorScreenState extends State<EditorScreen> {
         if (d.name == 'Nouvelle icône') d.name = a.name;
       });
     }
+    final mode = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(
+              title: Text(
+                'Ajouter sur l’écran d’accueil',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.crop_square_rounded),
+              title: const Text('Sans badge · widget'),
+              subtitle: const Text(
+                'Votre création sans cercle blanc ajouté. Widget 1 × 1 ; placement et taille gérés par le téléphone.',
+              ),
+              onTap: () => Navigator.pop(ctx, 'widget'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.add_to_home_screen_rounded),
+              title: const Text('Raccourci classique'),
+              subtitle: const Text(
+                'Format adapté à l’écran d’accueil. Le badge Icon Studio reste imposé par Android.',
+              ),
+              onTap: () => Navigator.pop(ctx, 'shortcut'),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+    if (mode == null || !mounted) return;
     setState(() => busy = true);
     try {
+      if (mode == 'widget') {
+        final bytes = await ArtImages.png(d, resolution: 512);
+        if (!await save(announce: false)) return;
+        final result = await widget.store.platform.pinWidget(d, bytes);
+        if (mounted) {
+          if (result == 'manual') {
+            await showDialog<void>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Ajouter le widget manuellement'),
+                content: const Text(
+                  'Votre icône est prête. Sur l’écran d’accueil, faites un appui long sur une zone vide → Widgets → Icon Studio → Icône sans badge. Choisissez ensuite votre création. Retirez l’ancien raccourci avec son badge depuis l’écran d’accueil.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Compris'),
+                  ),
+                ],
+              ),
+            );
+          } else {
+            notice(
+              context,
+              'Confirmez l’ajout du widget sans badge. Retirez ensuite l’ancien raccourci depuis l’écran d’accueil.',
+            );
+          }
+        }
+        return;
+      }
       if (!await widget.store.platform.shortcutSupport()) {
         if (mounted) {
           notice(
@@ -495,9 +571,43 @@ class _EditorScreenState extends State<EditorScreen> {
       ),
     ],
   );
+  PriorityApp? get priority => priorityForDesign(d);
+  InstalledApp? get installedTarget {
+    for (final a in widget.store.apps) {
+      if (a.package == d.package) return a;
+    }
+    return null;
+  }
+
+  void applyPriority(IconDesign next) {
+    final id = d.id,
+        name = d.name,
+        pkg = d.package,
+        app = d.appName,
+        pin = d.pinState;
+    change(
+      () => d = next.copy()
+        ..id = id
+        ..name = name
+        ..package = pkg
+        ..appName = app
+        ..pinState = pin,
+    );
+    selected = 0;
+  }
+
   Widget backgroundPanel() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
+      if (priority != null) ...[
+        heading('Compositions pour ${priority!.name}'),
+        PriorityStyles(
+          profile: priority!,
+          app: installedTarget,
+          platform: widget.store.platform,
+          onSelected: applyPriority,
+        ),
+      ],
       heading('Styles rapides'),
       SizedBox(
         height: 46,
