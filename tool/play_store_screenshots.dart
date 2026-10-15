@@ -97,7 +97,13 @@ void main() {
       key: key,
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: studioTheme(Brightness.light),
+        theme: studioTheme(Brightness.light).copyWith(
+          filledButtonTheme: FilledButtonThemeData(
+            style: FilledButton.styleFrom(
+              textStyle: const TextStyle(fontFamily: 'sans-serif'),
+            ),
+          ),
+        ),
         home: screen,
       ),
     );

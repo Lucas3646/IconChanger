@@ -771,8 +771,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 await store.setTheme(e.key);
                                 if (ctx.mounted) Navigator.pop(ctx);
                               } catch (err) {
-                                if (ctx.mounted)
+                                if (ctx.mounted) {
                                   notice(ctx, friendlyError(err));
+                                }
                               }
                             },
                           ),
