@@ -3,6 +3,7 @@ import '../models/design.dart';
 
 class AndroidService {
   static const channel = MethodChannel('iconstudio/android');
+  Future<void> openPrivacyPolicy() => channel.invokeMethod('openPrivacyPolicy');
   Future<String> storageDirectory() async =>
       (await channel.invokeMethod<String>('storageDirectory'))!;
   Future<List<InstalledApp>> listApps() async =>

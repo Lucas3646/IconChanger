@@ -41,6 +41,10 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "iconstudio/android").setMethodCallHandler { call, result ->
             try {
                 when (call.method) {
+                    "openPrivacyPolicy" -> {
+                        startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/Lucas3646/IconChanger/blob/main/PRIVACY.md")))
+                        result.success(null)
+                    }
                     "storageDirectory" -> result.success(filesDir.absolutePath)
                     "listApps" -> worker.execute {
                         try {

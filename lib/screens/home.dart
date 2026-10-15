@@ -5,6 +5,7 @@ import '../models/priority_apps.dart';
 import '../services/priority_art.dart';
 import 'priority_catalog.dart';
 import '../services/store.dart';
+import '../services/platform_service.dart';
 import '../widgets/icon_art.dart';
 import '../widgets/studio_ui.dart';
 import 'editor.dart';
@@ -737,50 +738,67 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     context: context,
     showDragHandle: true,
     builder: (ctx) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Icon Studio',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 4),
-            const Text('Version 1.0.1 · Votre studio privé'),
-            const SizedBox(height: 20),
-            const Text('Apparence'),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              children:
-                  {'system': 'Automatique', 'light': 'Clair', 'dark': 'Sombre'}
-                      .entries
-                      .map(
-                        (e) => ChoiceChip(
-                          label: Text(e.value),
-                          selected: store.theme == e.key,
-                          onSelected: (_) async {
-                            try {
-                              await store.setTheme(e.key);
-                              if (ctx.mounted) Navigator.pop(ctx);
-                            } catch (err) {
-                              if (ctx.mounted) notice(ctx, friendlyError(err));
-                            }
-                          },
-                        ),
-                      )
-                      .toList(),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Icon Studio ajoute des raccourcis : les icônes système ne sont pas remplacées. Le badge et la forme finale dépendent de l’écran d’accueil.\n\nRetirez les anciens raccourcis depuis votre écran d’accueil. Une application désinstallée ne pourra plus être ouverte.',
-              style: TextStyle(fontSize: 13, height: 1.5),
-            ),
-            if (store.loadWarning != null) Text(store.loadWarning!),
-            const SizedBox(height: 12),
-          ],
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Icon Studio',
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              const Text('Version 1.0.1 · Votre studio privé'),
+              const SizedBox(height: 20),
+              const Text('Apparence'),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                children:
+                    {
+                          'system': 'Automatique',
+                          'light': 'Clair',
+                          'dark': 'Sombre',
+                        }.entries
+                        .map(
+                          (e) => ChoiceChip(
+                            label: Text(e.value),
+                            selected: store.theme == e.key,
+                            onSelected: (_) async {
+                              try {
+                                await store.setTheme(e.key);
+                                if (ctx.mounted) Navigator.pop(ctx);
+                              } catch (err) {
+                                if (ctx.mounted)
+                                  notice(ctx, friendlyError(err));
+                              }
+                            },
+                          ),
+                        )
+                        .toList(),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Icon Studio ajoute des raccourcis : les icônes système ne sont pas remplacées. Le badge et la forme finale dépendent de l’écran d’accueil.\n\nRetirez les anciens raccourcis depuis votre écran d’accueil. Une application désinstallée ne pourra plus être ouverte.',
+                style: TextStyle(fontSize: 13, height: 1.5),
+              ),
+              TextButton.icon(
+                icon: const Icon(Icons.privacy_tip_outlined),
+                label: const Text('Politique de confidentialité'),
+                onPressed: () async {
+                  try {
+                    await AndroidService().openPrivacyPolicy();
+                  } catch (err) {
+                    if (ctx.mounted) notice(ctx, friendlyError(err));
+                  }
+                },
+              ),
+              if (store.loadWarning != null) Text(store.loadWarning!),
+              const SizedBox(height: 12),
+            ],
+          ),
         ),
       ),
     ),
