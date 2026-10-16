@@ -188,9 +188,9 @@ void main() {
       )),
     ));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Appliquer sur l’écran d’accueil'));
     await tester.runAsync(() async {
-      for (var i = 0; i < 100 && pin == null; i++) {
+      await tester.tap(find.text('Appliquer sur l’écran d’accueil'));
+      for (var i = 0; i < 250 && (pin == null || store.designs.isEmpty || store.designs.first.pinState != 'pending'); i++) {
         await Future<void>.delayed(const Duration(milliseconds: 20));
       }
     });
