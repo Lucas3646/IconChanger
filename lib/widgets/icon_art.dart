@@ -54,11 +54,13 @@ class ArtImages {
     return frame.image;
   }
 
-  static Future<Uint8List> png(IconDesign d, {int resolution = 1024}) async {
+  static Future<Uint8List> png(
+    IconDesign d, {int resolution = 1024, bool launcherForeground = false}
+  ) async {
     await load(d);
     final recorder = ui.PictureRecorder();
     IconArtPainter(
-      d,
+      d, launcherForeground: launcherForeground,
     ).paint(Canvas(recorder), Size.square(resolution.toDouble()));
     final picture = recorder.endRecording();
     final image = await picture.toImage(resolution, resolution);
@@ -118,7 +120,8 @@ class _IconArtState extends State<IconArt> {
 
 class IconArtPainter extends CustomPainter {
   final IconDesign design;
-  IconArtPainter(this.design);
+  final bool launcherForeground;
+  IconArtPainter(this.design, {this.launcherForeground = false});
   @override
   void paint(Canvas canvas, Size size) {
     final s = size.shortestSide;
@@ -128,7 +131,7 @@ class IconArtPainter extends CustomPainter {
       Radius.circular(s * design.radius),
     );
     canvas.save();
-    canvas.clipRRect(shape);
+    if (!launcherForeground) canvas.clipRRect(shape);
     final bg = Paint()
       ..color = Color(
         design.background,
@@ -144,7 +147,7 @@ class IconArtPainter extends CustomPainter {
         ],
       );
     }
-    canvas.drawRect(bounds, bg);
+    if (!launcherForeground) canvas.drawRect(bounds, bg);
     for (final l in design.layers) {
       canvas.save();
       canvas.translate(l.x * s, l.y * s);

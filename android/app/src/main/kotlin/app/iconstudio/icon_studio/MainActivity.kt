@@ -2,9 +2,6 @@ package app.iconstudio.icon_studio
 
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
-import android.graphics.Rect
-import android.graphics.Paint
-import android.graphics.drawable.AdaptiveIconDrawable
 import android.app.Activity
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
@@ -98,7 +95,9 @@ class MainActivity : FlutterActivity() {
                     "pinShortcut" -> {
                         val id = call.argument<String>("id")!!
                         val pkg = call.argument<String>("package")!!
-                        val name = call.argument<String>("name")!!.trim().take(40)
+                        val name = call.argument<String>("name")?.trim().orEmpty().ifBlank {
+                            packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString()
+                        }
                         if (packageManager.getLaunchIntentForPackage(pkg) == null) {
                             result.error("MISSING_APP", "Cette application n’est plus installée.", null)
                         } else if (!manager.isRequestPinShortcutSupported) {
@@ -107,14 +106,18 @@ class MainActivity : FlutterActivity() {
                             val bytes = call.argument<ByteArray>("bytes")!!
                             val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                                 ?: throw IllegalArgumentException("Image invalide")
-                            val size = min(512, max(manager.iconMaxWidth, manager.iconMaxHeight))
-                            val resized = Bitmap.createScaledBitmap(bitmap, max(96, size), max(96, size), true)
                             val intent = Intent(this, ShortcutLaunchActivity::class.java).apply {
                                 action = Intent.ACTION_VIEW; putExtra("target_package", pkg)
                                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                             }
                             val shortcut = ShortcutInfo.Builder(this, id).setShortLabel(name.ifBlank { "Application" })
-                                .setLongLabel(name.ifBlank { "Application" }).setIcon(adaptiveIcon(resized, call.argument<Number>("background")?.toInt() ?: Color.BLACK))
+                                .setLongLabel(name.ifBlank { "Application" }).setIcon(LauncherIcon.create(
+                                    bitmap, manager.iconMaxWidth, manager.iconMaxHeight,
+                                    call.argument<Number>("background")?.toInt() ?: Color.BLACK,
+                                    call.argument<Number>("background2")?.toInt() ?: Color.BLACK,
+                                    call.argument<Boolean>("gradient") ?: false,
+                                    call.argument<Number>("gradientAngle")?.toDouble() ?: 0.0
+                                ))
                                 .setIntent(intent).build()
                             if (manager.pinnedShortcuts.any { it.id == id }) {
                                 if (manager.updateShortcuts(listOf(shortcut))) result.success("updated")
@@ -128,7 +131,7 @@ class MainActivity : FlutterActivity() {
                                 val accepted = manager.requestPinShortcut(shortcut, callback.intentSender)
                                 result.success(if (accepted) "pending" else "unsupported")
                             }
-                            if (resized !== bitmap) resized.recycle(); bitmap.recycle()
+                            bitmap.recycle()
                         }
                     }
                     "hasWidgetDesign" -> result.success(WidgetIcons.design(this,call.argument<String>("id")!!) != null)
@@ -213,15 +216,6 @@ class MainActivity : FlutterActivity() {
                 }
             } catch (e: Exception) { result.error("ANDROID", e.localizedMessage ?: "Opération impossible.", null) }
         }
-    }
-    private fun adaptiveIcon(source: Bitmap, background: Int): Icon {
-        val inset=AdaptiveIconDrawable.getExtraInsetFraction()
-        val side=(source.width*(1+2*inset)).roundToInt()
-        val padded=Bitmap.createBitmap(side,side,Bitmap.Config.ARGB_8888)
-        val canvas=Canvas(padded);canvas.drawColor(background)
-        val margin=(side-source.width)/2
-        canvas.drawBitmap(source,null,Rect(margin,margin,margin+source.width,margin+source.height),Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
-        return Icon.createWithAdaptiveBitmap(padded)
     }
     private fun decodeBounded(path: String, maxSize: Int): Bitmap {
         return ImageDecoder.decodeBitmap(ImageDecoder.createSource(File(path))) { decoder, info, _ ->

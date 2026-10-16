@@ -163,73 +163,8 @@ class _EditorScreenState extends State<EditorScreen> {
         if (d.name == 'Nouvelle icône') d.name = a.name;
       });
     }
-    final mode = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const ListTile(
-              title: Text(
-                'Ajouter sur l’écran d’accueil',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.crop_square_rounded),
-              title: const Text('Sans badge · widget'),
-              subtitle: const Text(
-                'Votre création sans cercle blanc ajouté. Widget 1 × 1 ; placement et taille gérés par le téléphone.',
-              ),
-              onTap: () => Navigator.pop(ctx, 'widget'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.add_to_home_screen_rounded),
-              title: const Text('Raccourci classique'),
-              subtitle: const Text(
-                'Format adapté à l’écran d’accueil. Le badge Icon Studio reste imposé par Android.',
-              ),
-              onTap: () => Navigator.pop(ctx, 'shortcut'),
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-    if (mode == null || !mounted) return;
     setState(() => busy = true);
     try {
-      if (mode == 'widget') {
-        final bytes = await ArtImages.png(d, resolution: 512);
-        if (!await save(announce: false)) return;
-        final result = await widget.store.platform.pinWidget(d, bytes);
-        if (mounted) {
-          if (result == 'manual') {
-            await showDialog<void>(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: const Text('Ajouter le widget manuellement'),
-                content: const Text(
-                  'Votre icône est prête. Sur l’écran d’accueil, faites un appui long sur une zone vide → Widgets → Icon Studio → Icône sans badge. Choisissez ensuite votre création. Retirez l’ancien raccourci avec son badge depuis l’écran d’accueil.',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Compris'),
-                  ),
-                ],
-              ),
-            );
-          } else {
-            notice(
-              context,
-              'Confirmez l’ajout du widget sans badge. Retirez ensuite l’ancien raccourci depuis l’écran d’accueil.',
-            );
-          }
-        }
-        return;
-      }
       if (!await widget.store.platform.shortcutSupport()) {
         if (mounted) {
           notice(
@@ -239,7 +174,9 @@ class _EditorScreenState extends State<EditorScreen> {
         }
         return;
       }
-      final bytes = await ArtImages.png(d, resolution: 512);
+      final bytes = await ArtImages.png(
+        d, resolution: 512, launcherForeground: true,
+      );
       if (!await save(announce: false)) return;
       final state = await widget.store.platform.pin(d, bytes);
       if (state == 'unsupported') {
@@ -254,7 +191,7 @@ class _EditorScreenState extends State<EditorScreen> {
           context,
           state == 'updated'
               ? 'Raccourci existant mis à jour.'
-              : 'Demande envoyée. Confirmez l’ajout sur l’écran d’accueil ; l’icône originale reste disponible.',
+              : 'Confirmez le raccourci Android avec son nom. Retirez l’ancien widget surdimensionné de l’écran d’accueil. Un badge peut être ajouté par le launcher.',
         );
       }
     } catch (e) {

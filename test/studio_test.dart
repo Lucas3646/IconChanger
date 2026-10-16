@@ -164,30 +164,42 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
-  testWidgets(
-    'Apply explicitly offers badge-free widget and classic shortcut',
-    (tester) async {
-      final store = StudioStore(AndroidService());
-      await tester.runAsync(() => store.init());
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: studioTheme(Brightness.light),
-          home: EditorScreen(
-            store,
-            IconDesign(package: 'com.android.chrome', name: 'Chrome'),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Appliquer sur l’écran d’accueil'));
-      await tester.pumpAndSettle();
-      expect(find.text('Sans badge · widget'), findsOneWidget);
-      expect(find.text('Raccourci classique'), findsOneWidget);
-      expect(
-        find.textContaining('Le badge Icon Studio reste imposé'),
-        findsOneWidget,
-      );
-      expect(tester.takeException(), isNull);
-    },
-  );
+  testWidgets('Apply requests a native shortcut with the application label', (tester) async {
+    final calls = <String>[];
+    Map<dynamic, dynamic>? pin;
+    final store = StudioStore(AndroidService());
+    await tester.runAsync(() => store.init());
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(AndroidService.channel, (call) async {
+      calls.add(call.method);
+      if (call.method == 'shortcutSupport') return true;
+      if (call.method == 'hasWidgetDesign') return false;
+      if (call.method == 'pinShortcut') {
+        pin = call.arguments as Map;
+        return 'pending';
+      }
+      return null;
+    });
+    await tester.pumpWidget(MaterialApp(
+      theme: studioTheme(Brightness.light),
+      home: EditorScreen(store, IconDesign(
+        package: 'com.instagram.android', appName: 'Instagram', name: 'Instagram',
+        layers: [IconLayer(kind: 'text', value: 'IG')],
+      )),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Appliquer sur l’écran d’accueil'));
+    await tester.runAsync(() async {
+      for (var i = 0; i < 100 && pin == null; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
+    });
+    await tester.pumpAndSettle();
+    expect(calls, contains('pinShortcut'));
+    expect(calls, isNot(contains('pinWidget')));
+    expect(pin?['name'], 'Instagram');
+    expect(pin?['package'], 'com.instagram.android');
+    expect(pin?['bytes'], isNotEmpty);
+    expect(tester.takeException(), isNull);
+  });
 }

@@ -38,7 +38,7 @@ object WidgetIcons {
             val bitmap=BitmapFactory.decodeFile(data.optString("path"))
             if(bitmap!=null) views.setImageViewBitmap(R.id.widget_icon,bitmap)
             views.setTextViewText(R.id.widget_label,data.optString("name"))
-            views.setViewVisibility(R.id.widget_label,android.view.View.GONE)
+            views.setViewVisibility(R.id.widget_label,android.view.View.VISIBLE)
         }
         return views
     }

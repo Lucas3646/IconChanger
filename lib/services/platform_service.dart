@@ -30,7 +30,12 @@ class AndroidService {
             (d.background & 0x00ffffff) |
             ((d.backgroundOpacity * 255).round() << 24),
         'package': d.package,
-        'name': d.name,
+        'name': d.name.trim().isEmpty || d.name == 'Nouvelle icône'
+            ? d.appName
+            : d.name,
+        'background2': d.background2,
+        'gradient': d.gradient,
+        'gradientAngle': d.gradientAngle,
         'bytes': bytes,
       }))!;
   Future<bool> hasWidget(String id) async =>
