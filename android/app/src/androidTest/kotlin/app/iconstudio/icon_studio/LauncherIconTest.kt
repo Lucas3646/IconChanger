@@ -30,8 +30,8 @@ class LauncherIconTest {
         }
         assertTrue(count > 1000)
         assertEquals(2.0, (maxX-minX+1).toDouble()/(maxY-minY+1), .05)
-        assertEquals(output.width-1, minX+maxX, 1)
-        assertEquals(output.height-1, minY+maxY, 1)
+        assertTrue(kotlin.math.abs(output.width-1-minX-maxX) <= 1)
+        assertTrue(kotlin.math.abs(output.height-1-minY-maxY) <= 1)
         assertEquals(Color.BLACK, output.getPixel(0,0))
         source.recycle(); output.recycle()
     }

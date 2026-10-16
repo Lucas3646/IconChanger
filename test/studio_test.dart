@@ -164,42 +164,56 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
-  testWidgets('Apply requests a native shortcut with the application label', (tester) async {
+  testWidgets('Apply uses the native shortcut capability, without a widget chooser', (tester) async {
     final calls = <String>[];
-    Map<dynamic, dynamic>? pin;
     final store = StudioStore(AndroidService());
     await tester.runAsync(() => store.init());
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(AndroidService.channel, (call) async {
       calls.add(call.method);
-      if (call.method == 'shortcutSupport') return true;
-      if (call.method == 'hasWidgetDesign') return false;
-      if (call.method == 'pinShortcut') {
-        pin = call.arguments as Map;
-        return 'pending';
-      }
+      if (call.method == 'shortcutSupport') return false;
       return null;
     });
     await tester.pumpWidget(MaterialApp(
       theme: studioTheme(Brightness.light),
       home: EditorScreen(store, IconDesign(
         package: 'com.instagram.android', appName: 'Instagram', name: 'Instagram',
-        layers: [IconLayer(kind: 'text', value: 'IG')],
       )),
     ));
     await tester.pumpAndSettle();
-    await tester.runAsync(() async {
-      await tester.tap(find.text('Appliquer sur l’écran d’accueil'));
-      for (var i = 0; i < 250 && (pin == null || store.designs.isEmpty || store.designs.first.pinState != 'pending'); i++) {
-        await Future<void>.delayed(const Duration(milliseconds: 20));
-      }
-    });
+    await tester.tap(find.text('Appliquer sur l’écran d’accueil'));
     await tester.pumpAndSettle();
-    expect(calls, contains('pinShortcut'));
+    expect(calls, contains('shortcutSupport'));
     expect(calls, isNot(contains('pinWidget')));
-    expect(pin?['name'], 'Instagram');
-    expect(pin?['package'], 'com.instagram.android');
-    expect(pin?['bytes'], isNotEmpty);
+    expect(find.text('Sans badge · widget'), findsNothing);
+    expect(find.textContaining('ne permet pas l’ajout de raccourcis'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  test('Native pin keeps custom labels and falls back to the real app name', () async {
+    final payloads = <Map<dynamic, dynamic>>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(AndroidService.channel, (call) async {
+      if (call.method == 'pinShortcut') {
+        payloads.add(call.arguments as Map);
+        return 'pending';
+      }
+      return null;
+    });
+    final d = IconDesign(package: 'com.instagram.android', appName: 'Instagram', name: '');
+    final bytes = await ArtImages.png(d, resolution: 512, launcherForeground: true);
+    await AndroidService().pin(d, bytes);
+    d.name = 'Mon Instagram';
+    await AndroidService().pin(d, bytes);
+    expect(payloads[0]['name'], 'Instagram');
+    expect(payloads[1]['name'], 'Mon Instagram');
+    expect(payloads[0]['package'], 'com.instagram.android');
+    expect(payloads[0]['id'], payloads[1]['id']);
+    final codec = await ui.instantiateImageCodec(bytes);
+    final image = (await codec.getNextFrame()).image;
+    final data = (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+    expect(data.getUint8(3), 0);
+    expect(image.width, 512);
+    image.dispose(); codec.dispose();
   });
 }
