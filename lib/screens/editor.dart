@@ -174,6 +174,7 @@ class _EditorScreenState extends State<EditorScreen> {
         }
         return;
       }
+      final legacyWidgetExists = await widget.store.platform.hasWidget(d.id);
       final bytes = await ArtImages.png(
         d, resolution: 512, launcherForeground: true,
       );
@@ -190,8 +191,12 @@ class _EditorScreenState extends State<EditorScreen> {
         notice(
           context,
           state == 'updated'
-              ? 'Raccourci existant mis à jour.'
-              : 'Confirmez le raccourci Android avec son nom. Retirez l’ancien widget surdimensionné de l’écran d’accueil. Un badge peut être ajouté par le launcher.',
+              ? (legacyWidgetExists
+                  ? 'Raccourci natif mis à jour. L’ancien widget reste distinct : retirez-le manuellement de l’écran d’accueil.'
+                  : 'Raccourci Android natif mis à jour avec son libellé.')
+              : (legacyWidgetExists
+                  ? 'Confirmez le nouveau raccourci Android avec son nom, puis retirez l’ancien widget surdimensionné de l’écran d’accueil. Un badge peut être ajouté par Android.'
+                  : 'Confirmez le raccourci Android avec son nom. Un badge Icon Studio peut être ajouté par le launcher.'),
         );
       }
     } catch (e) {
@@ -434,7 +439,7 @@ class _EditorScreenState extends State<EditorScreen> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Déplacez et zoomez le calque dans l’aperçu.',
+                          'Raccourci Android natif avec nom (pas un widget).',
                           style: TextStyle(
                             fontSize: 11,
                             color: Theme.of(
