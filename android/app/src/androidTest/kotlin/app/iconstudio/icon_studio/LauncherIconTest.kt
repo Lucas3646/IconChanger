@@ -53,7 +53,11 @@ class LauncherIconTest {
         context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         device.wait(Until.hasObject(By.pkg(context.packageName).depth(0)),15000)
         instrumentation.runOnMainSync { assertTrue(manager.requestPinShortcut(shortcut,null)) }
-        val add = device.wait(Until.findObject(By.text(java.util.regex.Pattern.compile("(?i)add to home screen|add automatically|add"))),15000)
+        val folder = File(context.getExternalFilesDir(null),"launcher-proof").apply { mkdirs() }
+        device.waitForIdle()
+        device.dumpWindowHierarchy(File(folder,"confirmation.xml"))
+        device.takeScreenshot(File(folder,"confirmation.png"))
+        val add = device.wait(Until.findObject(By.res("android", "button1")),15000)
         assertNotNull("Native launcher confirmation",add)
         add.click()
         device.pressHome()
@@ -62,7 +66,6 @@ class LauncherIconTest {
         val pinned = manager.pinnedShortcuts.single { it.id == "launcher-regression" }
         assertEquals("Instagram", pinned.shortLabel.toString())
         assertEquals("Instagram", pinned.longLabel.toString())
-        val folder = File(context.getExternalFilesDir(null),"launcher-proof").apply { mkdirs() }
         device.takeScreenshot(File(folder,"home.png"))
         device.dumpWindowHierarchy(File(folder,"home.xml"))
         label.click()

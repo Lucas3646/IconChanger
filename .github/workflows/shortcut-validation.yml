@@ -55,8 +55,11 @@ jobs:
           profile: pixel_6
           disable-animations: true
           script: |
-            cd android && ./gradlew connectedDebugAndroidTest && cd ..
+            cd android
+            ./gradlew connectedDebugAndroidTest; result=$?
+            cd ..
             adb pull /sdcard/Android/data/app.iconstudio.icon_studio/files/launcher-proof build/launcher-proof
+            exit $result
       - uses: actions/upload-artifact@v4
         if: always()
         with:
