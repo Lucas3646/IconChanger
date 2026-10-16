@@ -25,6 +25,22 @@ jobs:
       - run: dart format lib test
       - run: flutter analyze
       - run: flutter test
+      - name: Prepare Android NDK (retry transient SDK download errors)
+        run: |
+          NDK_VERSION=27.0.12077973
+          NDK_PATH="$ANDROID_HOME/ndk/$NDK_VERSION"
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ -f "$NDK_PATH/source.properties" ]; then exit 0; fi
+          for attempt in 1 2 3; do
+            echo "NDK installation attempt $attempt/3"
+            rm -rf "$NDK_PATH"
+            if "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "ndk;$NDK_VERSION" && [ -f "$NDK_PATH/source.properties" ]; then
+              exit 0
+            fi
+            sleep 8
+          done
+          echo "Unable to install Android NDK after three attempts" >&2
+          exit 1
       - name: Prepare unsigned aligned APK
         run: |
           python3 - <<'PY'
