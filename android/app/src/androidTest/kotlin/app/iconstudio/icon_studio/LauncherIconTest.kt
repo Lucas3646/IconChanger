@@ -10,6 +10,7 @@ import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import java.util.regex.Pattern
 
 @RunWith(AndroidJUnit4::class)
 class LauncherIconTest {
@@ -57,9 +58,20 @@ class LauncherIconTest {
         device.waitForIdle()
         device.dumpWindowHierarchy(File(folder,"confirmation.xml"))
         device.takeScreenshot(File(folder,"confirmation.png"))
-        val add = device.wait(Until.findObject(By.res("android", "button1")),15000)
-        assertNotNull("Native launcher confirmation",add)
-        add.click()
+        // Pixel Launcher implements its own confirmation sheet: android:id/button1
+        // is not present on all Android versions (notably API 35).
+        val addLabel = Pattern.compile("(?i)^(add|ajouter)(\\b.*)?$")
+        val add = device.wait(
+            Until.findObject(By.text(addLabel).clickable(true)), 15000
+        ) ?: device.findObjects(By.clickable(true)).firstOrNull { control ->
+            val label = (control.text.orEmpty() + " " +
+                control.contentDescription.orEmpty()).trim()
+            addLabel.matcher(label).find()
+        } ?: device.findObject(By.res("android", "button1"))
+        val controls = device.findObjects(By.clickable(true))
+            .joinToString(" | ") { "${it.text.orEmpty()} / ${it.contentDescription.orEmpty()}" }
+        assertNotNull("Native launcher confirmation not found; clickable controls: $controls", add)
+        add!!.click()
         device.pressHome()
         assertTrue(device.wait(Until.hasObject(By.text("Instagram")),15000))
         val label = device.findObject(By.text("Instagram"))
