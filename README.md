@@ -9,13 +9,15 @@ Application Android personnelle de création et de personnalisation d’icônes,
 
 Sur le téléphone, téléchargez le fichier avec Chrome. Si vous choisissez le ZIP, extrayez-le dans Fichiers, puis ouvrez `Icon-Studio.apk`. Android demande éventuellement d’autoriser cette source à installer des applications. Validez l’installation. Le navigateur ne peut pas installer un APK automatiquement.
 
-## Mise à jour 1.0.1 — icône sans badge
+## Raccourcis Android natifs — code 1.0.2 en cours de validation
 
-Dans l’éditeur, appuyez sur **Appliquer**, puis choisissez **Sans badge · widget**. Un widget 1 × 1 affiche votre dessin sans badge Icon Studio ni cercle blanc ajouté et ouvre l’application associée. Confirmez l’ajout puis retirez l’ancien raccourci avec son badge depuis l’écran d’accueil.
+**Important :** la dernière release APK disponible (v1.0.1) utilise encore l'ancien choix « Sans badge · widget ». Le code plus récent de la branche `main` n'est **pas encore publié dans un APK signé**.
 
-Si le launcher ne propose pas l’ajout direct : appui long sur une zone vide → Widgets → Icon Studio → Icône sans badge, puis choisissez la création préparée. Les modifications enregistrées dans l’éditeur mettent à jour ses widgets existants.
+Dans le nouvel éditeur, **Appliquer sur l'écran d'accueil** utilise directement `ShortcutManager.requestPinShortcut`, et non un widget. L'icône est rendue avec un premier plan transparent, un fond Android adaptatif et une zone de sécurité ; le launcher contrôle le masque et la taille finale. Le raccourci porte le vrai nom de l'application ou le nom personnalisé, transmis dans `shortLabel` et `longLabel`, puis ouvre l'application choisie.
 
-La taille et les marges d’un widget dépendent du launcher ; il ne peut pas être rangé comme une application dans un dossier. Il conserve la forme dessinée dans l’éditeur. Le format adaptatif corrige aussi le cercle blanc des raccourcis classiques lorsque le fond choisi est opaque ; ceux-ci gardent leur badge Android et la forme imposée par le launcher.
+**Si une ancienne icône Instagram reste trop grande et sans nom :** il s'agit vraisemblablement du widget créé par la v1.0.1. Il faut le retirer manuellement de l'écran d'accueil, puis ajouter un **nouveau raccourci Android natif** après installation d'un APK qui intègre le nouveau code. Mettre le code à jour ne transforme pas automatiquement un widget déjà placé en raccourci natif.
+
+**Limites du système Android :** le badge Icon Studio peut être imposé sur le raccourci, et le masque/les marges varient avec Pixel Launcher, One UI Home et les autres launchers. Le widget historique reste une option *sans badge*, mais il ne peut pas garantir la taille d'une application ni le libellé système.
 
 ## Votre sélection — 31 applications
 
