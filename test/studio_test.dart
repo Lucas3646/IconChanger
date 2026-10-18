@@ -164,7 +164,7 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
-  testWidgets('Apply uses the native shortcut capability, without a widget chooser', (tester) async {
+  testWidgets('Apply offers native and badge-free widget modes', (tester) async {
     final calls = <String>[];
     final store = StudioStore(AndroidService());
     await tester.runAsync(() => store.init());
@@ -183,10 +183,42 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Appliquer sur l’écran d’accueil'));
     await tester.pumpAndSettle();
+    expect(find.text('Raccourci natif'), findsOneWidget);
+    expect(find.text('Sans badge · widget 1×1'), findsOneWidget);
+    expect(calls, isNot(contains('shortcutSupport')));
+    await tester.tap(find.text('Raccourci natif'));
+    await tester.pumpAndSettle();
     expect(calls, contains('shortcutSupport'));
     expect(calls, isNot(contains('pinWidget')));
-    expect(find.text('Sans badge · widget'), findsNothing);
-    expect(find.textContaining('ne permet pas l’ajout de raccourcis'), findsOneWidget);
+    expect(find.textContaining('ne permet pas les raccourcis natifs'),
+        findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Widget mode does not require native shortcut support', (tester) async {
+    final calls = <String>[];
+    final store = StudioStore(AndroidService());
+    await tester.runAsync(() => store.init());
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(AndroidService.channel, (call) async {
+      calls.add(call.method);
+      if (call.method == 'hasWidgetDesign') return false;
+      if (call.method == 'pinWidget') return 'manual';
+      return null;
+    });
+    await tester.pumpWidget(MaterialApp(
+      theme: studioTheme(Brightness.light),
+      home: EditorScreen(store, IconDesign(
+        package: 'com.instagram.android', appName: 'Instagram', name: 'Instagram',
+      )),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Appliquer sur l’écran d’accueil'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sans badge · widget 1×1'));
+    await tester.pumpAndSettle();
+    expect(calls, contains('pinWidget'));
+    expect(calls, isNot(contains('shortcutSupport')));
     expect(tester.takeException(), isNull);
   });
 
