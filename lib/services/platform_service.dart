@@ -40,20 +40,26 @@ class AndroidService {
       }))!;
   Future<bool> hasWidget(String id) async =>
       await channel.invokeMethod<bool>('hasWidgetDesign', {'id': id}) ?? false;
+  // Widgets receive the same transparent foreground and background settings
+  // as native adaptive shortcuts, with their own badge-free circular mask.
+  Map<String, dynamic> widgetArgs(IconDesign d, Uint8List bytes) => {
+    'id': d.id,
+    'package': d.package,
+    'name': d.name.trim().isEmpty || d.name == 'Nouvelle icône'
+        ? d.appName
+        : d.name,
+    'bytes': bytes,
+    'background': (d.background & 0x00ffffff) |
+        ((d.backgroundOpacity * 255).round() << 24),
+    'background2': d.background2,
+    'gradient': d.gradient,
+    'gradientAngle': d.gradientAngle,
+  };
   Future<void> updateWidget(IconDesign d, Uint8List bytes) =>
-      channel.invokeMethod('updateWidgetDesign', {
-        'id': d.id,
-        'package': d.package,
-        'name': d.name,
-        'bytes': bytes,
-      });
+      channel.invokeMethod('updateWidgetDesign', widgetArgs(d, bytes));
   Future<String> pinWidget(IconDesign d, Uint8List bytes) async =>
-      (await channel.invokeMethod<String>('pinWidget', {
-        'id': d.id,
-        'package': d.package,
-        'name': d.name,
-        'bytes': bytes,
-      }))!;
+      (await channel.invokeMethod<String>(
+          'pinWidget', widgetArgs(d, bytes)))!;
   Future<void> launch(String package) =>
       channel.invokeMethod('launchApp', {'package': package});
   Future<String> process(String path, String mode, double tolerance) async =>
