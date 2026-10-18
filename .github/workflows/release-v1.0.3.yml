@@ -36,7 +36,7 @@ jobs:
           # but cannot update the existing differently-signed v1.0.1 install.
           flutter build apk --release --no-pub
           cp build/app/outputs/flutter-apk/app-release.apk dist/Icon-Studio-v1.0.3-fresh-install.apk
-      - name: Build side-by-side v1.0.3 APK (preserves installed v1.0.1)
+      - name: Build side-by-side v1.0.3 APK (keeps prior installations)
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -95,6 +95,6 @@ jobs:
             dist/Icon-Studio-v1.0.3-fresh-install.apk \
             dist/Icon-Studio-v1.0.3-parallele.apk \
             dist/SHA256SUMS.txt \
-            --title "Icon Studio v1.0.3 — raccourcis natifs avec libellés" \
+            --title "Icon Studio v1.0.3 — raccourci natif ou widget sans badge" \
             --notes-file dist/RELEASE_NOTES.md \
             --target "$GITHUB_SHA"
