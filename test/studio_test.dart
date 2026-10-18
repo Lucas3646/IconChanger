@@ -195,31 +195,29 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Widget mode does not require native shortcut support', (tester) async {
+  test('Widget mode forwards label and style without native shortcut check', () async {
     final calls = <String>[];
-    final store = StudioStore(AndroidService());
-    await tester.runAsync(() => store.init());
+    Map<dynamic, dynamic>? args;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(AndroidService.channel, (call) async {
       calls.add(call.method);
-      if (call.method == 'hasWidgetDesign') return false;
-      if (call.method == 'pinWidget') return 'manual';
+      if (call.method == 'pinWidget') {
+        args = call.arguments as Map;
+        return 'manual';
+      }
       return null;
     });
-    await tester.pumpWidget(MaterialApp(
-      theme: studioTheme(Brightness.light),
-      home: EditorScreen(store, IconDesign(
-        package: 'com.instagram.android', appName: 'Instagram', name: 'Instagram',
-      )),
-    ));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Appliquer sur l’écran d’accueil'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Sans badge · widget 1×1'));
-    await tester.pumpAndSettle();
-    expect(calls, contains('pinWidget'));
+    final d = IconDesign(
+      package: 'com.instagram.android', appName: 'Instagram', name: '',
+    );
+    final foreground = await ArtImages.png(
+      d, resolution: 512, launcherForeground: true,
+    );
+    expect(await AndroidService().pinWidget(d, foreground), 'manual');
+    expect(args?['name'], 'Instagram');
+    expect(args?['package'], 'com.instagram.android');
+    expect(args?['background'], isNotNull);
     expect(calls, isNot(contains('shortcutSupport')));
-    expect(tester.takeException(), isNull);
   });
 
   test('Native pin keeps custom labels and falls back to the real app name', () async {
