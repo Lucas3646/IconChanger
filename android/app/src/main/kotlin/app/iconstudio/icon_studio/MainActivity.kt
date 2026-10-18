@@ -136,14 +136,28 @@ class MainActivity : FlutterActivity() {
                     }
                     "hasWidgetDesign" -> result.success(WidgetIcons.design(this,call.argument<String>("id")!!) != null)
                     "updateWidgetDesign" -> {
-                        WidgetIcons.store(this,call.argument<String>("id")!!,call.argument<String>("name")!!,call.argument<String>("package")!!,call.argument<ByteArray>("bytes")!!)
+                        WidgetIcons.store(
+                            this, call.argument<String>("id")!!, call.argument<String>("name")!!,
+                            call.argument<String>("package")!!, call.argument<ByteArray>("bytes")!!,
+                            call.argument<Number>("background")?.toInt() ?: Color.BLACK,
+                            call.argument<Number>("background2")?.toInt() ?: Color.BLACK,
+                            call.argument<Boolean>("gradient") ?: false,
+                            call.argument<Number>("gradientAngle")?.toDouble() ?: 0.0
+                        )
                         result.success(true)
                     }
                     "pinWidget" -> {
                         val id=call.argument<String>("id")!!
                         val pkg=call.argument<String>("package")!!
                         if(packageManager.getLaunchIntentForPackage(pkg)==null) { result.error("MISSING_APP","Application désinstallée.",null);return@setMethodCallHandler }
-                        WidgetIcons.store(this,id,call.argument<String>("name")!!,pkg,call.argument<ByteArray>("bytes")!!)
+                        WidgetIcons.store(
+                            this, id, call.argument<String>("name")!!, pkg,
+                            call.argument<ByteArray>("bytes")!!,
+                            call.argument<Number>("background")?.toInt() ?: Color.BLACK,
+                            call.argument<Number>("background2")?.toInt() ?: Color.BLACK,
+                            call.argument<Boolean>("gradient") ?: false,
+                            call.argument<Number>("gradientAngle")?.toDouble() ?: 0.0
+                        )
                         val wm=AppWidgetManager.getInstance(this)
                         if(!wm.isRequestPinAppWidgetSupported) result.success("manual")
                         else {
