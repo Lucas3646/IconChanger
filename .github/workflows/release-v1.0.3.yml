@@ -1,0 +1,100 @@
+name: Publish Icon Studio v1.0.3 APKs
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/release-v1.0.3.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.7'
+          channel: stable
+          cache: true
+      - name: Verify Flutter code
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test
+      - name: Prepare output directory
+        run: mkdir -p dist
+      - name: Build installable v1.0.3 APK (fresh installation only)
+        run: |
+          # The v1.0.1 signing keystore is deliberately NOT in Git.
+          # Android's local debug signing config creates an installable APK
+          # but cannot update the existing differently-signed v1.0.1 install.
+          flutter build apk --release --no-pub
+          cp build/app/outputs/flutter-apk/app-release.apk dist/Icon-Studio-v1.0.3-fresh-install.apk
+      - name: Build side-by-side v1.0.3 APK (preserves installed v1.0.1)
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('android/app/build.gradle.kts')
+          s = p.read_text()
+          needle = 'applicationId = "app.iconstudio.icon_studio"'
+          assert needle in s
+          p.write_text(s.replace(needle, 'applicationId = "app.iconstudio.icon_studio.v103"'))
+          p = Path('android/app/src/main/AndroidManifest.xml')
+          s = p.read_text()
+          assert 'android:label="Icon Studio"' in s
+          p.write_text(s.replace('android:label="Icon Studio"', 'android:label="Icon Studio 1.0.3"'))
+          PY
+          flutter build apk --release --no-pub
+          cp build/app/outputs/flutter-apk/app-release.apk dist/Icon-Studio-v1.0.3-parallele.apk
+      - name: Verify APK signatures and package identities
+        run: |
+          set -euo pipefail
+          SIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          for apk in dist/*.apk; do
+            "$SIGNER" verify --verbose "$apk"
+            unzip -t "$apk" | tail -n 1
+          done
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging dist/Icon-Studio-v1.0.3-fresh-install.apk | head -n 2
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging dist/Icon-Studio-v1.0.3-parallele.apk | head -n 2
+          cd dist && sha256sum *.apk > SHA256SUMS.txt
+      - name: Release notes
+        run: |
+          cat > dist/RELEASE_NOTES.md <<'EOF'
+          ## Icon Studio v1.0.3 — choix raccourci natif ou widget sans badge
+
+          Dans l'éditeur, **Appliquer** propose désormais deux options :
+          - **Raccourci natif** : même icône adaptative et libellé géré par le launcher. Badge Icon Studio éventuellement ajouté par Android.
+          - **Sans badge · widget 1×1** : affiche l'icône circulaire en 48 dp, le nom de l'application en dessous, sans badge ni carte visible. Ouvre l'application d'origine au toucher.
+
+          Les deux modes utilisent le même premier plan et fond d'icône. Les widgets enregistrés se mettent à jour lorsque l'icône est modifiée. Le placement, les marges et le rendu du texte d'un widget restent propres au launcher ; la parfaite identité visuelle ne peut être garantie sur tous les téléphones.
+
+          **À installer :**
+          - **Version 1.0.3 parallèle** (`Icon-Studio-v1.0.3-parallele.apk`) si v1.0.2 ou une autre version est déjà installée. La nouvelle version a son propre espace de stockage, sans supprimer ni récupérer automatiquement les créations de l'ancienne.
+          - **Installation neuve** (`Icon-Studio-v1.0.3-fresh-install.apk`) si Icon Studio n'est pas installé.
+          - Le certificat de signature des anciennes releases n'est pas accessible à la compilation GitHub. Ces APK sont signés par le runner Android : ils ne peuvent pas mettre à jour directement l'ancienne installation. **Ne désinstallez pas l'ancienne version avant d'avoir sauvegardé vos créations.**
+
+          Après installation, ouvrez Instagram dans Icon Studio, choisissez **Appliquer → Sans badge · widget 1×1**, confirmez puis sélectionnez la création si Android ouvre le configurateur. Supprimez l'ancien raccourci Instagram avec badge manuellement.
+
+          Contrôles : analyse Flutter, tests Flutter, compilation Android release, vérification cryptographique de signature, vérification d'intégrité ZIP. Essai sur téléphone physique non revendiqué.
+          EOF
+      - name: Create published GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view v1.0.3 >/dev/null 2>&1; then
+            echo "Release v1.0.3 already exists. Refusing to overwrite."
+            exit 1
+          fi
+          gh release create v1.0.3 \
+            dist/Icon-Studio-v1.0.3-fresh-install.apk \
+            dist/Icon-Studio-v1.0.3-parallele.apk \
+            dist/SHA256SUMS.txt \
+            --title "Icon Studio v1.0.3 — raccourcis natifs avec libellés" \
+            --notes-file dist/RELEASE_NOTES.md \
+            --target "$GITHUB_SHA"
