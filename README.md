@@ -4,20 +4,20 @@ Application Android personnelle de création et de personnalisation d’icônes,
 
 ## Installer
 
-- [Télécharger le ZIP avec l’APK](https://github.com/Lucas3646/IconChanger/releases/latest/download/Icon-Studio.zip)
-- [Télécharger l’APK directement](https://github.com/Lucas3646/IconChanger/releases/latest/download/Icon-Studio.apk)
+- [Release v1.0.3](https://github.com/Lucas3646/IconChanger/releases/tag/v1.0.3)
+- [APK v1.0.3 (installation en parallèle, recommandé si Icon Studio est déjà installé)](https://github.com/Lucas3646/IconChanger/releases/download/v1.0.3/Icon-Studio-v1.0.3-parallele.apk)
+- [APK v1.0.3 (installation neuve)](https://github.com/Lucas3646/IconChanger/releases/download/v1.0.3/Icon-Studio-v1.0.3-fresh-install.apk)
 
-Sur le téléphone, téléchargez le fichier avec Chrome. Si vous choisissez le ZIP, extrayez-le dans Fichiers, puis ouvrez `Icon-Studio.apk`. Android demande éventuellement d’autoriser cette source à installer des applications. Validez l’installation. Le navigateur ne peut pas installer un APK automatiquement.
+Les APK sont signés pour une installation Android. La clé privée des anciennes versions n'étant pas accessible au build GitHub, **une mise à jour directe de la v1.0.2 n'est pas possible** : la version parallèle s'installe comme une seconde application. Les créations sauvegardées dans l'ancienne application restent dans celle-ci et ne sont pas automatiquement copiées.
 
-## Raccourcis Android natifs — code 1.0.2 en cours de validation
+## Deux modes d'application — v1.0.3
 
-**Important :** la dernière release APK disponible (v1.0.1) utilise encore l'ancien choix « Sans badge · widget ». Le code plus récent de la branche `main` n'est **pas encore publié dans un APK signé**.
+Dans l'éditeur, appuyez sur **Appliquer sur l’écran d’accueil** puis choisissez :
 
-Dans le nouvel éditeur, **Appliquer sur l'écran d'accueil** utilise directement `ShortcutManager.requestPinShortcut`, et non un widget. L'icône est rendue avec un premier plan transparent, un fond Android adaptatif et une zone de sécurité ; le launcher contrôle le masque et la taille finale. Le raccourci porte le vrai nom de l'application ou le nom personnalisé, transmis dans `shortLabel` et `longLabel`, puis ouvre l'application choisie.
+- **Raccourci natif** : `ShortcutManager.requestPinShortcut`, icône adaptative, nom affiché par le launcher et ouverture de l'application. Certains launchers imposent le badge Icon Studio.
+- **Sans badge · widget 1×1** : le même premier plan et fond adaptatifs sont composés avec un masque circulaire en une icône de 48 dp ; le nom est ajouté sous l'icône en 12 sp. Le widget est transparent, cliquable, sans badge et met à jour les créations liées.
 
-**Si une ancienne icône Instagram reste trop grande et sans nom :** il s'agit vraisemblablement du widget créé par la v1.0.1. Il faut le retirer manuellement de l'écran d'accueil, puis ajouter un **nouveau raccourci Android natif** après installation d'un APK qui intègre le nouveau code. Mettre le code à jour ne transforme pas automatiquement un widget déjà placé en raccourci natif.
-
-**Limites du système Android :** le badge Icon Studio peut être imposé sur le raccourci, et le masque/les marges varient avec Pixel Launcher, One UI Home et les autres launchers. Le widget historique reste une option *sans badge*, mais il ne peut pas garantir la taille d'une application ni le libellé système.
+Le mode widget cherche à reproduire la taille et l'espacement du launcher mais ne peut pas être **identique au pixel près** sur tous les appareils : Android contrôle l'espace des widgets et les libellés natifs des raccourcis. Si le launcher ne permet pas l'ajout direct, ouvrez ses widgets, ajoutez Icon Studio 1×1 puis sélectionnez votre création. Supprimez manuellement les anciennes icônes trop grandes de l'écran d'accueil.
 
 ## Votre sélection — 31 applications
 
@@ -57,7 +57,7 @@ Studio permet également de créer librement sans application. Mes icônes perme
 
 ## Limites réelles
 
-- L’icône originale dans la liste des applications n’est jamais remplacée. L’application ajoute un **raccourci**.
+- L’icône originale dans la liste des applications n’est jamais remplacée. L’application ajoute un **raccourci ou widget**, selon le mode choisi.
 - La forme finale, le badge Icon Studio, la confirmation et le placement sont contrôlés par le launcher. Le badge ne peut pas être supprimé avec cette méthode standard ; utilisez le mode widget sans badge.
 - Une demande envoyée n’est pas une confirmation d’ajout : le statut est vérifié auprès du launcher au retour dans l’application.
 - Une création déjà épinglée conserve son identité et son raccourci est mis à jour ; créez une variante pour un deuxième raccourci.
