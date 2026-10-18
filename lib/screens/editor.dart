@@ -238,7 +238,9 @@ class _EditorScreenState extends State<EditorScreen> {
       } else {
         final state = await widget.store.platform.pin(d, bytes);
         if (state == 'unsupported') {
-          if (mounted) notice(context, 'L’écran d’accueil a refusé la demande.');
+          if (mounted) {
+            notice(context, 'L’écran d’accueil a refusé la demande.');
+          }
           return;
         }
         d.pinState = state == 'updated' ? 'pinned' : 'pending';
@@ -252,7 +254,9 @@ class _EditorScreenState extends State<EditorScreen> {
         }
       }
     } catch (e) {
-      if (mounted) notice(context, friendlyError(e));
+      if (mounted) {
+        notice(context, friendlyError(e));
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }
