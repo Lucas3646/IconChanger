@@ -37,6 +37,37 @@ class LauncherIconTest {
         source.recycle(); output.recycle()
     }
 
+    @Test fun badgeFreeWidgetUsesCircularLauncherIconAndAppCaption() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val id = "10320261018"
+        val source = Bitmap.createBitmap(256, 256, Bitmap.Config.ARGB_8888)
+        Canvas(source).drawCircle(128f, 128f, 100f, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.MAGENTA
+        })
+        val output = WidgetIcons.renderWidgetBitmap(source, Color.BLACK)
+        assertEquals(192, output.width)
+        assertEquals(192, output.height)
+        assertEquals(0, Color.alpha(output.getPixel(0, 0)))
+        assertEquals(255, Color.alpha(output.getPixel(96, 96)))
+        assertTrue(Color.red(output.getPixel(96, 96)) > 100)
+
+        // Store the original transparent foreground, not the pre-masked output.
+        val foreground = java.io.ByteArrayOutputStream().also {
+            source.compress(Bitmap.CompressFormat.PNG, 100, it)
+        }.toByteArray()
+        WidgetIcons.store(context, id, "Instagram", "com.instagram.android", foreground, Color.BLACK)
+        val data = WidgetIcons.design(context, id)
+        assertNotNull(data)
+        assertEquals("Instagram", data!!.optString("name"))
+        assertEquals("com.instagram.android", data.optString("package"))
+        val saved = BitmapFactory.decodeFile(data.optString("path"))
+        assertNotNull(saved)
+        assertEquals(0, Color.alpha(saved!!.getPixel(0, 0)))
+        saved.recycle()
+        output.recycle()
+        source.recycle()
+    }
+
     @Test fun pinLabelAndLaunchOnLauncher() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
