@@ -93,7 +93,9 @@ class _EditorScreenState extends State<EditorScreen> {
       if (await widget.store.platform.hasWidget(saved.id)) {
         await widget.store.platform.updateWidget(
           saved,
-          await ArtImages.png(saved, resolution: 512),
+          await ArtImages.png(
+            saved, resolution: 512, launcherForeground: true,
+          ),
         );
       }
       if (mounted) {
