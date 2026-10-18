@@ -155,49 +155,99 @@ class _EditorScreenState extends State<EditorScreen> {
 
   Future<void> apply() async {
     if (d.package.isEmpty) {
-      final a = await chooseApp();
-      if (a == null || !mounted) return;
+      final app = await chooseApp();
+      if (app == null || !mounted) return;
       change(() {
-        d.package = a.package;
-        d.appName = a.name;
-        if (d.name == 'Nouvelle icône') d.name = a.name;
+        d.package = app.package;
+        d.appName = app.name;
+        if (d.name == 'Nouvelle icône') d.name = app.name;
       });
     }
+    if (!mounted) return;
+
+    final mode = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ListTile(
+                title: Text(
+                  'Ajouter sur l’écran d’accueil',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text('Choisissez le rendu de votre icône.'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.apps_rounded),
+                title: const Text('Raccourci natif'),
+                subtitle: const Text(
+                  'Taille Android et nom natif · badge Icon Studio possible',
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.pop(ctx, 'shortcut'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.hide_image_outlined),
+                title: const Text('Sans badge · widget 1×1'),
+                subtitle: const Text(
+                  'Icône et nom sous le logo · le launcher peut modifier les marges',
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.pop(ctx, 'widget'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (mode == null || !mounted) return;
     setState(() => busy = true);
     try {
-      if (!await widget.store.platform.shortcutSupport()) {
+      if (mode == 'shortcut' &&
+          !await widget.store.platform.shortcutSupport()) {
         if (mounted) {
-          notice(
-            context,
-            'Cet écran d’accueil ne permet pas l’ajout de raccourcis. Vous pouvez exporter le PNG.',
-          );
+          notice(context,
+              'Cet écran d’accueil ne permet pas les raccourcis natifs. Essayez le mode sans badge.');
         }
         return;
       }
-      final legacyWidgetExists = await widget.store.platform.hasWidget(d.id);
+
+      // Both modes share the same artwork. Android applies an adaptive mask
+      // to native shortcuts; the widget emulates it without a publisher badge.
       final bytes = await ArtImages.png(
-        d, resolution: 512, launcherForeground: true,
+        d,
+        resolution: 512,
+        launcherForeground: true,
       );
       if (!await save(announce: false)) return;
-      final state = await widget.store.platform.pin(d, bytes);
-      if (state == 'unsupported') {
-        if (mounted) notice(context, 'L’écran d’accueil a refusé la demande.');
-        return;
-      }
-      d.pinState = state == 'updated' ? 'pinned' : 'pending';
-      await widget.store.save(d);
-      if (mounted) {
-        setState(() => dirty = false);
-        notice(
-          context,
-          state == 'updated'
-              ? (legacyWidgetExists
-                  ? 'Raccourci natif mis à jour. L’ancien widget reste distinct : retirez-le manuellement de l’écran d’accueil.'
-                  : 'Raccourci Android natif mis à jour avec son libellé.')
-              : (legacyWidgetExists
-                  ? 'Confirmez le nouveau raccourci Android avec son nom, puis retirez l’ancien widget surdimensionné de l’écran d’accueil. Un badge peut être ajouté par Android.'
-                  : 'Confirmez le raccourci Android avec son nom. Un badge Icon Studio peut être ajouté par le launcher.'),
-        );
+      if (mode == 'widget') {
+        final state = await widget.store.platform.pinWidget(d, bytes);
+        if (mounted) {
+          setState(() => dirty = false);
+          notice(context,
+              state == 'manual'
+                  ? 'Ajoutez manuellement le widget Icon Studio 1×1 depuis les widgets du launcher, puis choisissez votre création.'
+                  : 'Confirmez l’ajout du widget sans badge. Choisissez votre création si Android ouvre sa configuration.');
+        }
+      } else {
+        final state = await widget.store.platform.pin(d, bytes);
+        if (state == 'unsupported') {
+          if (mounted) notice(context, 'L’écran d’accueil a refusé la demande.');
+          return;
+        }
+        d.pinState = state == 'updated' ? 'pinned' : 'pending';
+        await widget.store.save(d);
+        if (mounted) {
+          setState(() => dirty = false);
+          notice(context,
+              state == 'updated'
+                  ? 'Raccourci natif mis à jour avec son nom.'
+                  : 'Confirmez le raccourci avec son nom. Le badge Icon Studio dépend du launcher.');
+        }
       }
     } catch (e) {
       if (mounted) notice(context, friendlyError(e));
@@ -439,7 +489,7 @@ class _EditorScreenState extends State<EditorScreen> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Raccourci Android natif avec nom (pas un widget).',
+                          'Raccourci natif ou widget sans badge · choisissez après avoir appuyé sur Appliquer.',
                           style: TextStyle(
                             fontSize: 11,
                             color: Theme.of(
