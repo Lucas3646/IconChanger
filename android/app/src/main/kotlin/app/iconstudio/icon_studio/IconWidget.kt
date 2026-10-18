@@ -8,7 +8,14 @@ import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
+import android.graphics.Rect
 import android.os.Bundle
 import android.widget.*
 import org.json.JSONObject
@@ -17,14 +24,58 @@ import java.io.File
 object WidgetIcons {
     fun prefs(c: Context) = c.getSharedPreferences("icon_widgets", Context.MODE_PRIVATE)
     fun design(c: Context, id: String): JSONObject? = try { prefs(c).getString("design:$id", null)?.let { JSONObject(it) } } catch (_: Exception) { null }
-    fun store(c: Context, id: String, name: String, pkg: String, bytes: ByteArray) {
+    /** Mimics the visible center crop + circular launcher mask of our native adaptive icon. */
+    fun renderWidgetBitmap(
+        source: Bitmap, background: Int, background2: Int = background,
+        gradient: Boolean = false, angle: Double = 0.0
+    ): Bitmap {
+        val visible = 192
+        val adaptive = LauncherIcon.render(source, visible, visible, background, background2, gradient, angle)
+        val output = Bitmap.createBitmap(visible, visible, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(output)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+        canvas.drawCircle(visible / 2f, visible / 2f, visible / 2f, paint)
+        paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_IN)
+        val inset = (adaptive.width - visible) / 2
+        canvas.drawBitmap(
+            adaptive,
+            Rect(inset, inset, inset + visible, inset + visible),
+            Rect(0, 0, visible, visible),
+            paint
+        )
+        paint.xfermode = null
+        adaptive.recycle()
+        return output
+    }
+
+    fun store(
+        c: Context, id: String, name: String, pkg: String, bytes: ByteArray,
+        background: Int = Color.BLACK, background2: Int = background,
+        gradient: Boolean = false, angle: Double = 0.0
+    ) {
         require(id.matches(Regex("[0-9]+")))
-        val file = File(File(c.filesDir,"widget_icons").apply { mkdirs() },"$id.png")
-        val tmp = File(file.path+".tmp"); tmp.writeBytes(bytes); tmp.renameTo(file)
-        prefs(c).edit().putString("design:$id",JSONObject().put("name",name).put("package",pkg).put("path",file.path).toString()).commit()
+        val source = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            ?: throw IllegalArgumentException("Image de widget invalide")
+        val icon = try {
+            renderWidgetBitmap(source, background, background2, gradient, angle)
+        } finally {
+            source.recycle()
+        }
+        val file = File(File(c.filesDir, "widget_icons").apply { mkdirs() }, "$id.png")
+        val tmp = File(file.path + ".tmp")
+        try {
+            tmp.outputStream().use { require(icon.compress(Bitmap.CompressFormat.PNG, 100, it)) }
+        } finally {
+            icon.recycle()
+        }
+        check(tmp.renameTo(file)) { "Impossible de sauvegarder le widget" }
+        prefs(c).edit().putString(
+            "design:$id",
+            JSONObject().put("name", name).put("package", pkg).put("path", file.path).toString()
+        ).commit()
         val manager = AppWidgetManager.getInstance(c)
-        for (widgetId in manager.getAppWidgetIds(ComponentName(c,IconWidgetProvider::class.java))) {
-            if (prefs(c).getString("widget:$widgetId",null)==id) update(c, widgetId)
+        for (widgetId in manager.getAppWidgetIds(ComponentName(c, IconWidgetProvider::class.java))) {
+            if (prefs(c).getString("widget:$widgetId", null) == id) update(c, widgetId)
         }
     }
     fun views(c: Context, id: String?): RemoteViews {
