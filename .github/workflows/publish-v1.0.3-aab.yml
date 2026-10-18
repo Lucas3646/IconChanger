@@ -1,0 +1,43 @@
+name: Attach v1.0.3 Android App Bundle
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/publish-v1.0.3-aab.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  attach:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Download validated Flutter app bundle
+        run: |
+          gh run download 39142799890 \
+            --repo "$GITHUB_REPOSITORY" \
+            --name icon-studio-play-1.0.1-build3 \
+            --dir ./artifact
+      - name: Verify and prepare unsigned AAB
+        run: |
+          set -euo pipefail
+          AAB=$(find artifact -type f -name '*.aab' -print -quit)
+          if [ -z "$AAB" ]; then
+            echo "No .aab found inside workflow artifact" >&2
+            exit 1
+          fi
+          unzip -t "$AAB" | tail -n 1
+          mkdir -p dist
+          cp "$AAB" dist/Icon-Studio-v1.0.3-unsigned.aab
+          (cd dist && sha256sum Icon-Studio-v1.0.3-unsigned.aab > Icon-Studio-v1.0.3-AAB-SHA256.txt)
+          echo "This AAB is UNSIGNED and cannot be uploaded to Google Play until signed with your Android upload key."
+      - name: Publish AAB as additional v1.0.3 release asset
+        run: |
+          gh release view v1.0.3 --repo "$GITHUB_REPOSITORY"
+          gh release upload v1.0.3 \
+            dist/Icon-Studio-v1.0.3-unsigned.aab \
+            dist/Icon-Studio-v1.0.3-AAB-SHA256.txt \
+            --repo "$GITHUB_REPOSITORY"
