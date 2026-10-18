@@ -51,8 +51,11 @@ class LauncherIconTest {
             .setShortLabel("Instagram").setLongLabel("Instagram")
             .setIcon(LauncherIcon.create(source,manager.iconMaxWidth,manager.iconMaxHeight,Color.BLACK))
             .setIntent(intent).build()
-        context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        device.wait(Until.hasObject(By.pkg(context.packageName).depth(0)),15000)
+        // Avoid starting Flutter's MainActivity during this launcher instrumentation test.
+        // Its cold start can show an Android "App isn't responding" dialog on a busy CI emulator,
+        // blocking the native pin confirmation. The shortcut request doesn't require Flutter UI.
+        device.pressHome()
+        device.waitForIdle()
         instrumentation.runOnMainSync { assertTrue(manager.requestPinShortcut(shortcut,null)) }
         val folder = File(context.getExternalFilesDir(null),"launcher-proof").apply { mkdirs() }
         device.waitForIdle()
